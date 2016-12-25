@@ -27,9 +27,10 @@ struct ChaosBox
   int thresholdPotPin;
   int sampleOutputPin;
   int comparatorOutputPin;
+  int switchUpPin;
   
   int triggerState;
-  int threshold;
+  int tripped;
   int noise;
   int output;
 };
@@ -62,8 +63,12 @@ setup ()
   // the Ard doesn't have an RTC
   // and we're out of analogue pins
   // so if anyone has any better ideas...
-  randomSeed (analogRead (POT_1) + analogRead (POT_2));
-  randomise ();
+  int  seed = analogRead (POT_1) + analogRead (POT_2)
+    + analogRead (ANALOGUE_INPUT_1) + analogRead (ANALOGUE_INPUT_2);
+
+  // used instead of the costly randomise()
+  // let's see how it goes...
+  randomSeed (seed + millis ());
 
   // set up our chaos boxes
   // note we precompute some of the randomised values
@@ -73,20 +78,23 @@ setup ()
   gChaosBoxes [0].thresholdPotPin = POT_1;
   gChaosBoxes [0].sampleOutputPin = ANALOGUE_OUTPUT_1;
   gChaosBoxes [0].comparatorOutputPin = DIGITAL_OUTPUT_1;
+  gChaosBoxes [0].switchUpPin = SWITCH_1_UP;
+
   gChaosBoxes [0].triggerState = LOW;
-  gChaosBoxes [0].noise = random (2 ^ 10);
-  gChaosBoxes [0].threshold = analogRead (ANALOGUE_INPUT_1);
-  gChaosBoxes [0].output = random (2 ^ 10);
+  gChaosBoxes [0].tripped = false;
+  gChaosBoxes [0].noise = random (1024);
+  gChaosBoxes [0].output = random (1024);
 
   gChaosBoxes [1].triggerPin = DIGITAL_INPUT_2;
   gChaosBoxes [1].thresholdPotPin = POT_2;
   gChaosBoxes [1].sampleOutputPin = ANALOGUE_OUTPUT_2;
   gChaosBoxes [1].comparatorOutputPin = DIGITAL_OUTPUT_2;
+  gChaosBoxes [1].switchUpPin = SWITCH_2_UP;
+
   gChaosBoxes [1].triggerState = LOW;
-  gChaosBoxes [1].noise = random (2 ^ 10);
-  gChaosBoxes [1].threshold = analogRead (ANALOGUE_INPUT_2);
-  gChaosBoxes [1].output = random (2 ^ 10);
-  
+  gChaosBoxes [1].tripped = false;
+  gChaosBoxes [1].noise = random (1024);
+  gChaosBoxes [1].output = random (1024);
 }
 
 // LOOP
@@ -106,57 +114,50 @@ chaos (int inBoxIndex)
   struct ChaosBox *box = &gChaosBoxes [inBoxIndex];
    
   int trigger = digitalRead (box->triggerPin);
-  
+
   if (trigger == HIGH && box->triggerState == LOW)
   {
-    // woo, the trigger went high - it's GO time
-
-    int	threshold = analogRead (box->thresholdPotPin);
+  	// note this is greater than
+  	// so that if the threshold pot is all the way up
+  	// then the comparator will never trip (in theory!)
+    box->tripped = box->noise > analogRead (box->thresholdPotPin);
     
-    boolean	tripped = box->noise >= threshold;
-    
-    if (tripped)
+    if (box->tripped)
     {
-      // and the comparator trips!
-      // write a random number to the analogue output
+    	// note that the value range of analogWrite() is 0-255
+    	// so if we're mirroring voltages, then it's input/4
       analogWrite (box->sampleOutputPin, box->output);
       
       // i don't think there is settling time with a PWM filter network
       // but just in case anyone is feeding our output & comparator to a S&H...
-      // 1ms should be plenty!
       delay (1);
     }
-    
-    // update our comparator
-    digitalWrite (box->comparatorOutputPin, tripped);
-    
-    // our precomputed values are out of date
-    box->noise = -1;
-    box->output = -1;
+  }
+
+  // check gate/trigger mode
+  // note the switches are active LOW sigh
+  if (digitalRead (box->switchUpPin) == LOW)
+  {
+    // trigger mode, AND the comparator output with the trigger pin
+    digitalWrite (box->comparatorOutputPin, (box->tripped && trigger) ? HIGH : LOW);
+  }
+  else
+  {
+    // gate mode, just mirror the comparator state
+    digitalWrite (box->comparatorOutputPin, box->tripped ? HIGH : LOW);
   }
   
   box->triggerState = trigger;
-  
-	if (box->noise == -1 || box->output == -1)
-	{
-	  randomise ();
-  
-		if (box->noise == -1)
-		{
-			box->noise = random (2 ^ 10);
-		}
-	
-		if (box->output == -1)
-		{
-			box->output = random (2 ^ 10);
-		}
-	}
+
+  box->noise = random (1024);
+  box->output = random (1024);
 }
 
 // FUNCTIONS
 
 // make an attempt to randomise stuff
 // difficult without a RTC and we're out of analogue pins
+// note this is too expensive to do it in loop()
 void
 randomise ()
 {
@@ -175,6 +176,7 @@ randomise ()
     random (100);
   }
 }
+
 
 
 
