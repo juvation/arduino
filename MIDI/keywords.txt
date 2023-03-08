@@ -1,0 +1,48 @@
+#######################################
+# Syntax Coloring Map For MIDI Library
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+MIDI	KEYWORD1
+MIDIClient	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin KEYWORD2
+poll KEYWORD2
+sendChannelPressure KEYWORD2
+sendControlChange KEYWORD2
+sendNoteOff KEYWORD2
+sendNoteOn KEYWORD2
+sendPitchBend KEYWORD2
+sendPolyPressure KEYWORD2
+sendSongPosition KEYWORD2
+sendMIDISongSelect KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+kMIDINoteOff LITERAL1
+kMIDINoteOn LITERAL1
+kMIDIPolyPressure LITERAL1
+kMIDIControlChange LITERAL1
+kMIDIProgramChange LITERAL1
+kMIDIChannelPressure LITERAL1
+kMIDIPitchBend LITERAL1
+kMIDISysExStart LITERAL1
+kMIDISongPosition LITERAL1
+kMIDISongSelect LITERAL1
+kMIDITuneRequest LITERAL1
+kMIDISysExEnd LITERAL1
+kMIDIClock LITERAL1
+kMIDIStart LITERAL1
+kMIDIContinue LITERAL1
+kMIDIStop LITERAL1
+kMIDIActiveSensing LITERAL1
+kMIDIReset LITERAL1
